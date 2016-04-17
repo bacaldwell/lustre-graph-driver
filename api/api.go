@@ -187,13 +187,11 @@ func (h *Handler) listenAndServe(proto, addr, group string) error {
 		Handler: h.mux,
 	}
 
-	start := make(chan struct{})
-
 	var l net.Listener
 	var err error
 	switch proto {
 	case "tcp":
-		l, err = newTCPSocket(addr, nil, start)
+		l, err = newTCPSocket(addr, nil)
 		if err == nil {
 			err = writeSpec(group, l.Addr().String())
 		}
@@ -201,14 +199,13 @@ func (h *Handler) listenAndServe(proto, addr, group string) error {
 		var s string
 		s, err = fullSocketAddr(addr)
 		if err == nil {
-			l, err = newUnixSocket(s, group, start)
+			l, err = newUnixSocket(s, group)
 		}
 	}
 	if err != nil {
 		return err
 	}
 
-	close(start)
 	return server.Serve(l)
 }
 

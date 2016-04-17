@@ -11,7 +11,6 @@ import (
 	"syscall"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/docker/docker/pkg/listenbuffer"
 	"github.com/docker/libcontainer/user"
 )
 
@@ -28,13 +27,13 @@ type TLSConfig struct {
 	Verify      bool
 }
 
-func newUnixSocket(path, group string, activate <-chan struct{}) (net.Listener, error) {
+func newUnixSocket(path, group string) (net.Listener, error) {
 	if err := syscall.Unlink(path); err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
 	mask := syscall.Umask(0777)
 	defer syscall.Umask(mask)
-	l, err := listenbuffer.NewListenBuffer("unix", path, activate)
+	l, err := net.Listen("unix", path)
 	if err != nil {
 		return nil, err
 	}
@@ -49,8 +48,8 @@ func newUnixSocket(path, group string, activate <-chan struct{}) (net.Listener, 
 	return l, nil
 }
 
-func newTCPSocket(addr string, config *TLSConfig, activate <-chan struct{}) (net.Listener, error) {
-	l, err := listenbuffer.NewListenBuffer("tcp", addr, activate)
+func newTCPSocket(addr string, config *TLSConfig) (net.Listener, error) {
+	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, err
 	}

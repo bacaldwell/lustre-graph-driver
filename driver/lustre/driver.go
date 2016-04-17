@@ -33,6 +33,7 @@ func Init(home string, options []string) (graphdriver.Driver, error) {
 	}
 
 	if err := mount.MakePrivate(home); err != nil {
+		log.Errorf("Lustre")
 		return nil, err
 	}
 
@@ -65,30 +66,15 @@ func (d *LustreDriver) GetMetadata(id string) (map[string]string, error) {
 }
 
 func (d *LustreDriver) Cleanup() error {
-	err := d.LustreSet.Shutdown()
 
-	if err2 := mount.Unmount(d.home); err2 == nil {
-		err = err2
-	}
-
-	return err
+	return nil
 }
 
 func (d *LustreDriver) Create(id, parent string) error {
-	if err := d.LustreSet.AddDevice(id, parent); err != nil {
-		return err
-	}
 	return nil
 }
 
 func (d *LustreDriver) Remove(id string) error {
-	if !d.LustreSet.HasDevice(id) {
-		return nil
-	}
-
-	if err := d.LustreSet.DeleteDevice(id); err != nil {
-		return err
-	}
 
 	mountPoint := path.Join(d.home, "mnt", id)
 	if err := os.RemoveAll(mountPoint); err != nil && !os.IsNotExist(err) {
@@ -105,13 +91,9 @@ func (d *LustreDriver) Get(id, mountLabel string) (string, error) {
 		return "", err
 	}
 
-	if err := d.LustreSet.MountDevice(id, mp, mountLabel); err != nil {
-		return "", err
-	}
-
 	rootFs := path.Join(mp, "rootfs")
 	if err := os.MkdirAll(rootFs, 0755); err != nil && !os.IsExist(err) {
-		d.LustreSet.UnmountDevice(id)
+		//d.LustreSet.UnmountDevice(id)
 		return "", err
 	}
 
@@ -120,7 +102,7 @@ func (d *LustreDriver) Get(id, mountLabel string) (string, error) {
 		// Create an "id" file with the container/image id in it to help reconscruct this in case
 		// of later problems
 		if err := ioutil.WriteFile(idFile, []byte(id), 0600); err != nil {
-			d.LustreSet.UnmountDevice(id)
+			//d.LustreSet.UnmountDevice(id)
 			return "", err
 		}
 	}
@@ -129,13 +111,9 @@ func (d *LustreDriver) Get(id, mountLabel string) (string, error) {
 }
 
 func (d *LustreDriver) Put(id string) error {
-	if err := d.LustreSet.UnmountDevice(id); err != nil {
-		log.Errorf("Warning: error unmounting device %s: %s", id, err)
-		return err
-	}
 	return nil
 }
 
 func (d *LustreDriver) Exists(id string) bool {
-	return d.LustreSet.HasDevice(id)
+	return true
 }
