@@ -137,11 +137,11 @@ func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 		}
 	}
 
-	if err := mount.MakePrivate(home); err != nil {
+	if err := mountpk.MakePrivate(root); err != nil {
 		return nil, err
 	}
 
-	return &Driver{
+	return &LustreDriver{
 		root:    root,
 		active:  make(map[string]*ActiveMount),
 		uidMaps: uidMaps,
@@ -176,11 +176,6 @@ func (d *LustreDriver) String() string {
 }
 
 func (d *LustreDriver) GetMetadata(id string) (map[string]string, error) {
-	dir := d.dir(id)
-	if _, err := os.Stat(dir); err != nil {
-		return nil, err
-	}
-	
 	metadata := make(map[string]string)
 
 	metadata["mntPath"] = d.dir(mntPath, id)
@@ -198,10 +193,9 @@ func (d *LustreDriver) GetMetadata(id string) (map[string]string, error) {
 }
 
 // Cleanup any state created by overlay which should be cleaned when daemon
-// is being shutdown. For now, we just have to unmount the bind mounted
-// we had created.
-func (d *Driver) Cleanup() error {
-	return mount.Unmount(d.home)
+// is being shutdown.
+func (d *LustreDriver) Cleanup() error {
+	return nil
 }
 
 // Read the layers file for the current id and return all the
@@ -227,10 +221,21 @@ func (d *LustreDriver) getParentIds(id string) ([]string, error) {
 	return out, s.Err()
 }
 
+// CreateReadWrite creates a layer that is writable for use as a container
+// file system.
+func (d *LustreDriver) CreateReadWrite(id, parent, mountLabel string, storageOpt map[string]string) error {
+	return d.Create(id, parent, mountLabel, storageOpt)
+}
+
 // Create creates 4 dirs for each id: mnt, layers, work and diff
 // mnt and work are not used until Get is called, but we create them here anyway to
 // avoid having to create them multiple times
-func (d *LustreDriver) Create(id, parent string) error {
+func (d *LustreDriver) Create(id, parent string, mountLabel string, storageOpt map[string]string) (retErr error) {
+
+	if len(storageOpt) != 0 {
+		return fmt.Errorf("--storage-opt is not supported for overlay")
+	}
+
 	if err := d.createDirsFor(id); err != nil {
 		return err
 	}
@@ -629,13 +634,6 @@ func (d *LustreDriver) Diff(id, parent string) (archive.Archive, error) {
 		GIDMaps:       d.gidMaps,
 		OverlayFormat: true,
 	})
-}
-
-// Cleanup performs necessary tasks to release resources
-// held by the driver, e.g., unmounting all layered filesystems
-// known to this driver.
-func (d *LustreDriver) Cleanup() error {
-	return nil
 }
 
 // DiffSize calculates the changes between the specified id
