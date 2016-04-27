@@ -1,6 +1,7 @@
 # lustre-graph-driver
 This is a Docker graph driver plugin (experimental in 1.10) that implements a Docker storage driver using a Lustre filesystem mount. 
 
+![lustre-graph-driver](lustre-graph-driver.jpg)
 
 ## How to build
 Install dependencies with go get (TODO list dependencies here). You will know which dependencies are missing when there are errors in the command below
